@@ -17,7 +17,14 @@ var deps = {
 		src: ['MarkerCluster.Spiderfier.js'],
 		desc: 'Provides the ability to show all of the child markers of a cluster.',
 		heading: 'Spiderfier'
+	},
+
+	SpiderfierExtend: {
+		src: ['MarkerCluster.SpiderfierExtend.js'],
+		desc: 'Extends the Spiderfier with some statefulnis on updates and zoom.',
+		heading: 'Spiderfier Stateful Extension'
 	}
+
 };
 
 if (typeof exports !== 'undefined') {
