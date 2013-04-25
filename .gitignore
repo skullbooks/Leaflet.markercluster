@@ -2,6 +2,22 @@
 bin
 obj
 
+# Project settings folder of PhpStorm
+.idea
+
 # mstest test results
 TestResults
 node_modules
+
+# OS generated files #
+######################
+__MACOSX
+*/.DS_Store
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
