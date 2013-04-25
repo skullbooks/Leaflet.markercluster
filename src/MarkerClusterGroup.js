@@ -335,6 +335,9 @@ L.MarkerClusterGroup = L.FeatureGroup.extend({
 		if (this._spiderfierOnAdd) { //TODO FIXME: Not sure how to have spiderfier add something on here nicely
 			this._spiderfierOnAdd();
 		}
+		if (this._initSpiderfierExtend) { // init spiderfierExtend the same way as spiderfier is initialized
+			this._initSpiderfierExtend();
+		}
 
 		this._bindEvents();
 

@@ -12,8 +12,8 @@
 	<link rel="stylesheet" href="../dist/MarkerCluster.css" />
 	<link rel="stylesheet" href="../dist/MarkerCluster.Default.css" />
 	<!--[if lte IE 8]><link rel="stylesheet" href="../dist/MarkerCluster.Default.ie.css" /><![endif]-->
-	<!--<script src="../dist/leaflet.markercluster-dev-src.js"></script>-->
-	<script src="../dist/leaflet.markercluster-src.js"></script>
+	<script src="../dist/leaflet.markercluster-dev-src.js"></script>
+	<!--<script src="../dist/leaflet.markercluster-src.js"></script>-->
 	<script src="../src/MarkerCluster.SpiderfierExtend.js"></script>
 </head>
 <body style="font-family: verdana; font-size: 80%;">
@@ -86,8 +86,14 @@
 		markers.addLayer(trainGeoJsonLayer);
 		map.fitBounds(markers.getBounds());
 
+
 		markers.on('clusterclick', function (a) {
-			a.layer.spiderfy();
+			if (map.getMaxZoom() === map.getZoom() || a.layer.childrenAreOnSamePosition()) a.layer.spiderfy();
+			else a.layer.zoomToBounds();
+		});
+
+		markers.on('clustermouseover', function (a) {
+			if (a.layer.childrenAreOnSamePosition()) a.layer.spiderfy();
 		});
 
 		map.addLayer(markers);
@@ -102,15 +108,18 @@
 			else if (trainPosition == 0) trainDirection = 'up';
 
 			// build a new geoJson layer with the new train information
-			trainGeoJsonLayer = L.geoJson(trainJson[trainPosition], {});
+			trainGeoJsonLayer = L.geoJson(trainJson[trainPosition], {
+				onEachFeature: function (feature, layer) {
+					layer.bindPopup(feature.properties.name);
+				}
+			});
 
-			// update the cluster markers with both layers (stations first so that the station marker is always the first on spider.
-			markers.clearLayers();
-			markers.addLayer(stationGeoJsonLayer);
-			markers.addLayer(trainGeoJsonLayer);
+			// call the update layers api of the stateful spiderfier extension.
+			markers.updateLayers([stationGeoJsonLayer,trainGeoJsonLayer]);
 		}
 
 		L.DomUtil.get('moveTrain').onclick = function () {
+			console.log("### moveTrain ### spidered:", markers._getCurrentSpidered(), "popup:",  markers._getCurrentPopup());
 			moveTrain();
 		};
 	</script>
