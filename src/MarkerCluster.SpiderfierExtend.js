@@ -1,6 +1,6 @@
 /**
  * @file
- * @version 0.1
+ * @version 0.2
  * @author Jan-Victor Krille <jan-victor.krille@cn-consult.eu>
  */
 
@@ -29,19 +29,15 @@ L.MarkerClusterGroup.include({
 	{
 		var map = this._map;
 
-		console.log("### initSpiderfierExtend ###", this);
-
 		this.on('spiderfied', function (_event) {
-			console.log("FE spiderfied");
 			this._setCurrentSpidered(_event.target._spiderfied);
 		});
 
-		map.on("popupopen", function (_popup) {
-			this._setCurrentPopup(_popup);
+		map.on("popupopen", function (_event) {
+			this._setCurrentPopup(_event.popup);
 		}, this);
 
 		map.on("popupclose", function () {
-			// @todo we have no refreshing state at this time!!!
 			if (!this.refreshing)
 			{
 				this._clearCurrentPopup();
@@ -54,6 +50,7 @@ L.MarkerClusterGroup.include({
 
 		map.on('zoomstart', function () {
 			var currentSpidered = this._getCurrentSpidered();
+			this.refreshing = true;
 
 			if (currentSpidered)
 			{
@@ -63,7 +60,6 @@ L.MarkerClusterGroup.include({
 		}, this);
 
 		map.on('zoomend', function () {
-			console.log("FE zoomend");
 			var currentSpidered = this._getCurrentSpidered();
 
 			if (currentSpidered && this._zoom !== currentSpidered._zoom)
@@ -81,8 +77,11 @@ L.MarkerClusterGroup.include({
 
 				if (newClusterAtCurrentZoom)
 				{
-					newClusterAtCurrentZoom.noAnimationSpiderfy();
-					// @todo reopen popup
+					newClusterAtCurrentZoom.noanimationSpiderfy();
+					if (!map._popup)
+					{
+						this._restorePopupState();
+					}
 				}
 				else
 				{
@@ -91,6 +90,8 @@ L.MarkerClusterGroup.include({
 
 				this.spiderAnimations = true;
 			}
+
+			this.refreshing = false;
 		}, this);
 	},
 
@@ -156,68 +157,99 @@ L.MarkerClusterGroup.include({
 	 *
 	 * @private
 	 */
-	_restoreState: function ()
+	_restoreSpiderState: function ()
 	{
-		console.log("Do all the cool and magic restore state stuff!");
+		var currentSpidered = this._getCurrentSpidered();
 
-
-
-/*
 		// restore spiderfied cluster
-		if (this.currentSpidered)
+		if (currentSpidered)
 		{
-			var cluster = this.findClusterOnPosition(this.currentSpidered.getLatLng());
-			//console.log("FOUND cluster", cluster);
-			if (cluster && cluster.spiderfy && typeof cluster.spiderfy == "function")
+			var markerCluster = this.findMarkerClusterOnPosition(currentSpidered.getLatLng());
+			if (markerCluster && markerCluster.isMarkerCluster())
 			{
-				setTimeout(function() {
-					cluster.spiderfy();
-				}, 250);
+				markerCluster.noanimationSpiderfy();
 			}
 			else
 			{
-				// @todo there is some leaflet bug that in this case the marker disappears for a while ?
-				this.clearCurrentSpidered()
+				this._clearCurrentSpidered();
 			}
 		}
+	},
+
+	_restorePopupState: function ()
+	{
+		var currentPopup = this._getCurrentPopup();
 
 		// restore popup
-		if (this.currentPopup)
+		if (currentPopup)
 		{
-
-			var marker = this.findMarker(this.currentPopup);
-			//console.log("FOUND marker", marker);
+			var marker = this.findSingleMarkerByFeature(currentPopup._source.feature);
 
 			if (marker)
 			{
-				var possibleCluster = this.findClusterOnPosition(marker.getLatLng());
-				if (possibleCluster && possibleCluster.spiderfy && typeof possibleCluster.spiderfy == "function")
+				var markerCluster = this.findMarkerClusterOnPosition(marker.getLatLng());
+				if (markerCluster && markerCluster.isMarkerCluster())
 				{
-					//console.log("open cluster and popup", possibleCluster, marker);
-					setTimeout(function() {
-						possibleCluster.spiderfy();
+					if (this._getCurrentSpidered() && this._getCurrentSpidered().getLatLng().toString() !== markerCluster.getLatLng().toString())
+					{
+						this._getCurrentSpidered()._noanimationUnspiderfy();
+
+						// for faster spidering we have to do the ugly hack with the private _inZoomAnimation - don't know a better way.
+						markerCluster._group._inZoomAnimation = 0;
+						markerCluster.spiderfy();
+						markerCluster._group._inZoomAnimation = 3;
+					}
+					else
+					{
+						markerCluster.spiderfy();
+					}
+					setTimeout(function () {
 						marker.openPopup();
-					}, 250);
+					}, 50);
 				}
 				else
 				{
-					//console.log("just popup", marker);
-					setTimeout(function() {
-						marker.openPopup();
-					}, 220);
+					marker.openPopup();
 				}
+			}
+			else
+			{
+				this._clearCurrentPopup();
 			}
 
 		}
 
-		this.refreshing = false;
+	},
 
+	findSingleMarkerByFeature: function (_feature)
+	{
+		var marker = null;
 
-*/
+		this.eachLayer(function (_marker) {
+			if (_marker.feature.id === _feature.id)
+			{
+				marker = _marker;
+			}
+		}, this);
 
+		return marker;
+	},
 
+	findMarkerClusterOnPosition: function (_position)
+	{
+		var marker = null;
 
+		for (var key in this._layers)
+		{
+			var layer = this._layers[key];
+			if (layer.getLatLng().toString() === _position.toString())
+			{
+				marker = layer;
+				break;
+			}
+		}
 
+		return marker;
 	},
 
 	/**
@@ -226,12 +258,15 @@ L.MarkerClusterGroup.include({
 	 */
 	updateLayers: function (_layers)
 	{
+		this.refreshing = true;
 		this.clearLayers();
 		for (var i = 0; i < _layers.length; i++)
 		{
 			this.addLayer(_layers[i]);
 		}
-		this._restoreState();
+		this._restoreSpiderState();
+		this._restorePopupState();
+		this.refreshing = false;
 	},
 
 	/**
@@ -241,6 +276,15 @@ L.MarkerClusterGroup.include({
 	updateLayer: function (_layer)
 	{
 		this.updateLayers([_layer]);
+	}
+
+});
+
+L.Marker.include({
+
+	isMarkerCluster: function ()
+	{
+		return (this.spiderfy && typeof this.spiderfy === "function");
 	}
 
 });
@@ -294,7 +338,7 @@ L.MarkerCluster.include({
 		group.fire('spiderfied');
 	},
 
-	noAnimationSpiderfy: function () {
+	noanimationSpiderfy: function () {
 		if (this._group._spiderfied === this) {
 			return;
 		}
