@@ -1376,7 +1376,6 @@ L.MarkerCluster.include({
 								// 0 -> always spiral; Infinity -> always circle
 
 	spiderfy: function () {
-		console.log("SPIDER?", (this._group._spiderfied === this || this._group._inZoomAnimation), (this._group._spiderfied === this), (this._group._inZoomAnimation));
 		if (this._group._spiderfied === this || this._group._inZoomAnimation) {
 			return;
 		}
