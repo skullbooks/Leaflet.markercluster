@@ -1925,7 +1925,7 @@ L.MarkerClusterGroup.include({
 	},
 
 	/**
-	 *
+	 * Checks if a marker was spiderfied and re-spiderfies it if on the position is a marker cluster.
 	 * @private
 	 */
 	_restoreSpiderState: function ()
@@ -1936,7 +1936,7 @@ L.MarkerClusterGroup.include({
 		if (currentSpidered)
 		{
 			var markerCluster = this.findMarkerClusterOnPosition(currentSpidered.getLatLng());
-			if (markerCluster && markerCluster.isMarkerCluster())
+			if (markerCluster && markerCluster instanceof L.MarkerCluster)
 			{
 				markerCluster.noanimationSpiderfy();
 			}
@@ -1947,6 +1947,10 @@ L.MarkerClusterGroup.include({
 		}
 	},
 
+	/**
+	 * Checks is there was a popup opened that we have to reopen.
+	 * @private
+	 */
 	_restorePopupState: function ()
 	{
 		var currentPopup = this._getCurrentPopup();
@@ -1959,7 +1963,7 @@ L.MarkerClusterGroup.include({
 			if (marker)
 			{
 				var markerCluster = this.findMarkerClusterOnPosition(marker.getLatLng());
-				if (markerCluster && markerCluster.isMarkerCluster())
+				if (markerCluster && markerCluster instanceof L.MarkerCluster)
 				{
 					if (this._getCurrentSpidered() && this._getCurrentSpidered().getLatLng().toString() !== markerCluster.getLatLng().toString())
 					{
@@ -1992,6 +1996,11 @@ L.MarkerClusterGroup.include({
 
 	},
 
+	/**
+	 * Searches all the layers of this FeatureGroup for the one with the same feature.id as the given feature.
+	 * @param _feature The feature to look for.
+	 * @returns {L.Marker|null} The found marker or null.
+	 */
 	findSingleMarkerByFeature: function (_feature)
 	{
 		var marker = null;
@@ -2006,6 +2015,11 @@ L.MarkerClusterGroup.include({
 		return marker;
 	},
 
+	/**
+	 * Searches for a marker or a marker cluster on a given position.
+	 * @param {L.LatLng} _position The position as L.LatLng object.
+	 * @returns {L.MarkerCluster|L.Marker|null} The found marker or marker cluster or null.
+	 */
 	findMarkerClusterOnPosition: function (_position)
 	{
 		var marker = null;
@@ -2024,8 +2038,9 @@ L.MarkerClusterGroup.include({
 	},
 
 	/**
-	 *
-	 * @param _layers
+	 * Updates the marker cluster group with all the layers given in the array and tries to reopen popups and respiderfy as it was before.
+	 * Note: this removes all markers and adds all that are given again.
+	 * @param {Array} _layers An array of layers.
 	 */
 	updateLayers: function (_layers)
 	{
@@ -2041,21 +2056,13 @@ L.MarkerClusterGroup.include({
 	},
 
 	/**
-	 *
-	 * @param _layer
+	 * Updates the marker cluster group with the given layers and tries to reopen popups and respiderfy as it was before.
+	 * Note: this removes all markers and adds all that are given again.
+	 * @param {ILayer} _layer The new layer.
 	 */
 	updateLayer: function (_layer)
 	{
 		this.updateLayers([_layer]);
-	}
-
-});
-
-L.Marker.include({
-
-	isMarkerCluster: function ()
-	{
-		return (this.spiderfy && typeof this.spiderfy === "function");
 	}
 
 });
@@ -2109,6 +2116,9 @@ L.MarkerCluster.include({
 		group.fire('spiderfied');
 	},
 
+	/**
+	 * Spiderfies the marker cluster without animation.
+	 */
 	noanimationSpiderfy: function () {
 		if (this._group._spiderfied === this) {
 			return;
@@ -2146,9 +2156,9 @@ L.MarkerCluster.include({
 	},
 
 	/**
-	 *
-	 * @param _zoomLevel
-	 * @returns {null}
+	 * Gets the first child marker on the given zoom level.
+	 * @param {Number} _zoomLevel The zoom level to get the marker for.
+	 * @returns {L.MarkerCluster|L.Marker|null} Returns a marker cluster, a marker or null.
 	 */
 	getChildClusterAtZoomLevel: function (_zoomLevel)
 	{
@@ -2174,9 +2184,9 @@ L.MarkerCluster.include({
 	},
 
 	/**
-	 *
-	 * @param _zoomLevel
-	 * @returns {null}
+	 * Gets the parent marker on the given zoom level.
+	 * @param {Number} _zoomLevel The zoom level to get the marker for.
+	 * @returns {L.MarkerCluster|L.Marker|null} Returns a marker cluster, a marker or null.
 	 */
 	getParentClusterAtZoomLevel: function (_zoomLevel)
 	{

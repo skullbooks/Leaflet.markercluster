@@ -165,7 +165,7 @@ L.MarkerClusterGroup.include({
 		if (currentSpidered)
 		{
 			var markerCluster = this.findMarkerClusterOnPosition(currentSpidered.getLatLng());
-			if (markerCluster && markerCluster.isMarkerCluster())
+			if (markerCluster && markerCluster instanceof L.MarkerCluster)
 			{
 				markerCluster.noanimationSpiderfy();
 			}
@@ -192,7 +192,7 @@ L.MarkerClusterGroup.include({
 			if (marker)
 			{
 				var markerCluster = this.findMarkerClusterOnPosition(marker.getLatLng());
-				if (markerCluster && markerCluster.isMarkerCluster())
+				if (markerCluster && markerCluster instanceof L.MarkerCluster)
 				{
 					if (this._getCurrentSpidered() && this._getCurrentSpidered().getLatLng().toString() !== markerCluster.getLatLng().toString())
 					{
@@ -292,19 +292,6 @@ L.MarkerClusterGroup.include({
 	updateLayer: function (_layer)
 	{
 		this.updateLayers([_layer]);
-	}
-
-});
-
-L.Marker.include({
-
-	/**
-	 * Checks if the Marker is a marker cluster that can be spiderfied.
-	 * @returns {boolean} True or false.
-	 */
-	isMarkerCluster: function ()
-	{
-		return (this.spiderfy && typeof this.spiderfy === "function");
 	}
 
 });
