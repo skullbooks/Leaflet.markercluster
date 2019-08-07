@@ -109,7 +109,7 @@ L.MarkerCluster.include({
 			}
 		}
 
-        this._group._spiderfied = null;
+		this._group._spiderfied = null;
 	}
 });
 
