@@ -1,67 +1,93 @@
-var build = require('./build/build.js'),
-    lint = require('./build/hint.js');
+/*
+Leaflet.markercluster building, testing and linting scripts.
 
-var COPYRIGHT = '/*\n Copyright (c) 2012, Smartrak, David Leaver\n' +
-                ' Leaflet.markercluster is an open-source JavaScript library for Marker Clustering on leaflet powered maps.\n' + 
-                ' https://github.com/danzel/Leaflet.markercluster\n*/\n';
+To use, install Node, then run the following commands in the project root:
+
+    npm install -g jake
+    npm install
+
+To check the code for errors and build Leaflet from source, run "jake".
+To run the tests, run "jake test".
+
+For a custom build, open build/build.html in the browser and follow the instructions.
+*/
+
+var path = require('path');
 
 desc('Check Leaflet.markercluster source for errors with JSHint');
-task('lint', function () {
-
-	var files = build.getFiles();
-
-	console.log('Checking for JS errors...');
-
-	var errorsFound = lint.jshint(files);
-
-	if (errorsFound > 0) {
-		console.log(errorsFound + ' error(s) found.\n');
-		fail();
-	} else {
-		console.log('\tCheck passed');
-	}
+task('lint', {
+	async: true
+}, function(){
+		jake.exec('jshint', {
+			printStdout: true
+		}, function () {
+			console.log('\tCheck passed.\n');
+			complete();
+		});
 });
 
-desc('Combine and compress Leaflet.markercluster source files');
-task('build', ['lint'], function (compsBase32, buildName) {
-
-	var files = build.getFiles(compsBase32);
-
-	console.log('Concatenating ' + files.length + ' files...');
-
-	var content = build.combineFiles(files),
-	    newSrc = COPYRIGHT + content,
-
-	    pathPart = 'dist/leaflet.markercluster' + (buildName ? '-' + buildName : ''),
-	    srcPath = pathPart + '-src.js',
-
-	    oldSrc = build.load(srcPath),
-	    srcDelta = build.getSizeDelta(newSrc, oldSrc);
-
-	console.log('\tUncompressed size: ' + newSrc.length + ' bytes (' + srcDelta + ')');
-
-	if (newSrc === oldSrc) {
-		console.log('\tNo changes');
-	} else {
-		build.save(srcPath, newSrc);
-		console.log('\tSaved to ' + srcPath);
-	}
-
-	console.log('Compressing...');
-
-	var path = pathPart + '.js',
-	    oldCompressed = build.load(path),
-	    newCompressed = COPYRIGHT + build.uglify(content),
-	    delta = build.getSizeDelta(newCompressed, oldCompressed);
-
-	console.log('\tCompressed size: ' + newCompressed.length + ' bytes (' + delta + ')');
-
-	if (newCompressed === oldCompressed) {
-		console.log('\tNo changes');
-	} else {
-		build.save(path, newCompressed);
-		console.log('\tSaved to ' + path);
-	}
+desc('Combine Leaflet.markercluster source files');
+task('build', ['lint'], {
+	async: true
+}, function(){
+	jake.exec('npm run-script rollup', function() {
+		console.log('Rolled up.');
+		complete();
+	});
 });
 
-task('default', ['build']);
+desc('Compress bundled files');
+task('uglify', ['build'], function(){
+  jake.exec('npm run-script uglify', function() { console.log('Uglyfied.'); });
+});
+
+desc('Run PhantomJS tests');
+task('test', ['lint'], function() {
+
+	var karma = require('karma'),
+	testConfig = {configFile : path.join(__dirname, './spec/karma.conf.js')};
+
+	testConfig.browsers = ['PhantomJS'];
+
+	function isArgv(optName) {
+		 return process.argv.indexOf(optName) !== -1;
+	}
+
+	if (isArgv('--chrome')) {
+		testConfig.browsers.push('Chrome');
+	}
+	if (isArgv('--safari')) {
+		testConfig.browsers.push('Safari');
+	}
+	if (isArgv('--ff')) {
+		testConfig.browsers.push('Firefox');
+	}
+	if (isArgv('--ie')) {
+		testConfig.browsers.push('IE');
+	}
+
+	if (isArgv('--cov')) {
+		testConfig.preprocessors = {
+			'src/**/*.js': 'coverage'
+		};
+		testConfig.coverageReporter = {
+			type : 'html',
+			dir : 'coverage/'
+		};
+		testConfig.reporters = ['coverage'];
+	}
+
+	console.log('Running tests...');
+
+	var server = new karma.Server(testConfig, function(exitCode) {
+		if (!exitCode) {
+			console.log('\tTests ran successfully.\n');
+			complete();
+		} else {
+			process.exit(exitCode);
+		}
+	});
+	server.start();
+});
+
+task('default', ['build', 'uglify']);
